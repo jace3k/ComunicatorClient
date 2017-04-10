@@ -1,5 +1,6 @@
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 
 import java.io.IOException;
@@ -23,8 +24,8 @@ public class Client {
     private PrintWriter out;
 
 
-    public boolean connect(TextArea tf) {
-        try(Socket soc = new Socket("192.168.1.111",8189) )  {
+    public boolean connect(TextArea tf, ListView lw) {
+        try(Socket soc = new Socket("localhost",8189) )  {
             System.out.println("Połączono");
             socket = soc;
             in = new Scanner(socket.getInputStream());
@@ -40,9 +41,14 @@ public class Client {
                         while(!line.equals("qxqxend")) {
                             if(!line.equals("qxqxend")) {
                                 String userek[] = line.split("~");
-                                ports.add(Integer.parseInt(userek[0]));
-                                users.add(userek[1]);
+                                int userek0 = Integer.parseInt(userek[0]);
+                                if(userek0 != socket.getLocalPort()) {
+                                    ports.add(userek0);
+                                    users.add(userek[1]);
+                                }
                             }
+                            //
+                            // lw.setItems(users);
                             line = in.nextLine();
                         }
                     }

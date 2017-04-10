@@ -29,8 +29,11 @@ public class MainController implements Initializable {
     private Client client;
     private int portToSend;
 
+    boolean reconnect = true;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        client = new Client();
         createNewThreadAndConnect();
         setElements();
     }
@@ -55,23 +58,26 @@ public class MainController implements Initializable {
         });
 
         disconnect_button.setOnAction(event -> {
+            reconnect = false;
             client.closeSocket();
             System.exit(0);
         });
 
         connect_button.setOnAction(event -> {
             client.closeSocket();
-            createNewThreadAndConnect();
         });
     }
 
     private void createNewThreadAndConnect() {
 
-        t = new Thread(() -> {
-            client = new Client();
-            if(client.connect(read_area)) read_area.appendText("Połączenie zakończone.\n");
-            else read_area.appendText("Rozłączono.\n");
-        });
-        t.start();
+            t = new Thread(() -> {
+                while(reconnect) {
+
+                    if (client.connect(read_area, active_list)) read_area.appendText("Połączenie zakończone.\n");
+                    else read_area.appendText("Rozłączono.\n");
+                }
+            });
+            t.start();
+
     }
 }
