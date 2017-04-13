@@ -1,5 +1,4 @@
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -25,6 +24,7 @@ public class MainController implements Initializable, Runnable {
 
     @FXML TextArea read_area;
     @FXML TextField send_field;
+    @FXML TextField nick_field;
 
     @FXML Button send_button;
     @FXML Button refresh_button;
@@ -33,44 +33,69 @@ public class MainController implements Initializable, Runnable {
 
     @FXML ListView active_list;
 
-    int selectedUser;
-    Map<String, Integer> users;
+    private int selectedUser;
+    private Map<String, Integer> users;
 
-    Socket socket = null;
-    Thread thread = null;
-    PrintWriter out = null;
-    Scanner in = null;
+    private Socket socket = null;
+    private Thread thread = null;
+    private PrintWriter out = null;
+    private Scanner in = null;
+
+    private ObservableList<String> emptyList = FXCollections.observableArrayList();
+    private String nick = "Jonny";
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        connect();
-        send_button.setDisable(false);
+        //connect();
+        disconnectedStatus();
+        emptyList.add("<Rozłączono>");
+        active_list.setItems(emptyList);
         send_button.setOnAction(event -> {
             if(!send_field.getText().equals(""))
             sendMessage(socket.getLocalPort(), selectedUser, send_field.getText());
+            send_field.setText("");
         });
 
-
         connect_button.setOnAction(event -> {
+            nick = nick_field.getText();
             disconnect();
             connect();
+            connectedStatus();
         });
 
         disconnect_button.setOnAction(event -> {
             disconnect();
+            disconnectedStatus();
         });
 
         refresh_button.setOnAction(event -> updateUsersList());
 
-        active_list.getSelectionModel().selectedItemProperty().addListener(new ChangeListener() {
-            @Override
-            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-                String a = (String) observable.getValue();
-                System.out.println("Selected: " + a);
+        active_list.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            String a = (String) observable.getValue();
+            System.out.println("Selected: " + a);
+            if(a != null && !a.equals("<Rozłączono>")) {
+                send_button.setDisable(false);
                 selectedUser = users.get(a);
+            } else {
+                selectedUser = 0;
+                send_button.setDisable(true);
             }
         });
+    }
 
+    private void connectedStatus() {
+        nick_field.setDisable(true);
+        connect_button.setDisable(true);
+        disconnect_button.setDisable(false);
+        refresh_button.setDisable(false);
+    }
+    private void disconnectedStatus() {
+        nick_field.setDisable(false);
+        connect_button.setDisable(false);
+        disconnect_button.setDisable(true);
+        refresh_button.setDisable(true);
+        send_button.setDisable(true);
+        active_list.setItems(emptyList);
     }
 
     private void disconnect() {
@@ -80,31 +105,34 @@ public class MainController implements Initializable, Runnable {
             in.close();
             out.close();
             System.out.println("Rozłączono.");
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            //e.printStackTrace();
+            System.out.println("Disconnect - brak obiektów");
         }
     }
 
-    public void connect() {
+    private void connect() {
         try {
             socket = new Socket("localhost",8189);
             System.out.println("Połączono!");
             start();
         }catch (Exception e) {
             e.printStackTrace();
+            read_area.appendText("Błąd łączności.\n");
         }
     }
 
     private void start() throws IOException {
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new Scanner(socket.getInputStream());
+        out.println(nick);
         if (thread == null) {
             thread = new Thread(this);
             thread.start();
         }
     }
 
-    public boolean sendMessage(int myPort, int destPort, String msg) {
+    private boolean sendMessage(int myPort, int destPort, String msg) {
         try{
             out.println(myPort+"~"+destPort+"~"+msg);
             return true;
@@ -126,7 +154,8 @@ public class MainController implements Initializable, Runnable {
             System.out.println(line);
             checkMessage(line);
         }
-
+        read_area.appendText("Koniec połączenia.\n");
+        disconnectedStatus();
     }
 
     private synchronized void checkMessage(String line) {
@@ -142,7 +171,7 @@ public class MainController implements Initializable, Runnable {
                         users.put(userek[1],Integer.parseInt(userek[0]));
                     }
                 }
-                //updateUsersList();
+                updateUsersList();
                 line = in.nextLine();
             }
         }
@@ -157,8 +186,6 @@ public class MainController implements Initializable, Runnable {
         for (String key : users.keySet()) {
             items.add(key);
         }
-        active_list.setItems(items);
+        Platform.runLater(() -> active_list.setItems(items));
     }
-
-
 }
