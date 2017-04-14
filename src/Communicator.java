@@ -20,5 +20,6 @@ public class Communicator extends Application {
         primaryStage.setTitle("Communicator Client");
         primaryStage.setScene(new Scene(root));
         primaryStage.show();
+        primaryStage.setOnCloseRequest(event -> System.exit(0));
     }
 }

@@ -3,24 +3,21 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.ResourceBundle;
-import java.util.Scanner;
+import java.util.*;
 
 /**
  * Created by Jacek on 06.04.2017.
  */
 public class MainController implements Initializable, Runnable {
+
+    @FXML BorderPane bp;
 
     @FXML TextArea read_area;
     @FXML TextField send_field;
@@ -33,8 +30,11 @@ public class MainController implements Initializable, Runnable {
 
     @FXML ListView active_list;
 
+    @FXML Label info_write_label;
+
     private int selectedUser;
     private Map<String, Integer> users;
+    private Map<String, ArrayList<String>> history = new HashMap<>();
 
     private Socket socket = null;
     private Thread thread = null;
@@ -44,16 +44,30 @@ public class MainController implements Initializable, Runnable {
     private ObservableList<String> emptyList = FXCollections.observableArrayList();
     private String nick = "Jonny";
 
+    private boolean sent = false;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         //connect();
         disconnectedStatus();
         emptyList.add("<Rozłączono>");
-        active_list.setItems(emptyList);
+        Platform.runLater(() -> active_list.setItems(emptyList));
         send_button.setOnAction(event -> {
             if(!send_field.getText().equals(""))
             sendMessage(socket.getLocalPort(), selectedUser, send_field.getText());
             send_field.setText("");
+        });
+
+        send_field.setOnKeyReleased(event -> {
+
+            if(!send_field.getText().equals("") && !sent)
+            sendMessage(1,selectedUser, "@" + nick + " pisze...");
+            sent = true;
+            if(send_field.getText().equals("")) {
+                sendMessage(1, selectedUser, "!");
+                sent = false;
+            }
+
         });
 
         connect_button.setOnAction(event -> {
@@ -76,6 +90,16 @@ public class MainController implements Initializable, Runnable {
             if(a != null && !a.equals("<Rozłączono>")) {
                 send_button.setDisable(false);
                 selectedUser = users.get(a);
+
+                read_area.clear();
+                for(String key : history.keySet()) {
+                    if(key.equals(a)) {
+                        ArrayList<String> list = history.get(a);
+                        for(String msg : list) {
+                            read_area.appendText(msg+"\n");
+                        }
+                    }
+                }
             } else {
                 selectedUser = 0;
                 send_button.setDisable(true);
@@ -95,7 +119,10 @@ public class MainController implements Initializable, Runnable {
         disconnect_button.setDisable(true);
         refresh_button.setDisable(true);
         send_button.setDisable(true);
-        active_list.setItems(emptyList);
+        Platform.runLater(() -> active_list.setItems(emptyList));
+
+
+
     }
 
     private void disconnect() {
@@ -113,7 +140,7 @@ public class MainController implements Initializable, Runnable {
 
     private void connect() {
         try {
-            socket = new Socket("localhost",8189);
+            socket = new Socket("192.168.1.111",8189);
             System.out.println("Połączono!");
             start();
         }catch (Exception e) {
@@ -125,6 +152,7 @@ public class MainController implements Initializable, Runnable {
     private void start() throws IOException {
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new Scanner(socket.getInputStream());
+        history = new HashMap<>();
         out.println(nick);
         if (thread == null) {
             thread = new Thread(this);
@@ -133,6 +161,9 @@ public class MainController implements Initializable, Runnable {
     }
 
     private boolean sendMessage(int myPort, int destPort, String msg) {
+        if(msg.matches("(.*)~(.*)")) {
+            msg = msg.replaceAll("~"," ");
+        }
         try{
             out.println(myPort+"~"+destPort+"~"+msg);
             return true;
@@ -154,8 +185,9 @@ public class MainController implements Initializable, Runnable {
             System.out.println(line);
             checkMessage(line);
         }
-        read_area.appendText("Koniec połączenia.\n");
+        read_area.setText("Koniec połączenia.\n");
         disconnectedStatus();
+
     }
 
     private synchronized void checkMessage(String line) {
@@ -174,18 +206,63 @@ public class MainController implements Initializable, Runnable {
                 updateUsersList();
                 line = in.nextLine();
             }
+        } else if(line.matches("@(.*)")) {
+            setInfoLabel(line, true);
+        } else if(line.equals("!")) {
+            setInfoLabel(line, false);
+        } else {
+            //read_area.appendText(line + "\n");
+            showMessage(selectedUser, line);
+
+
         }
-        else {
-            read_area.appendText(line + "\n");
+    }
+
+    private void setInfoLabel(String line, boolean visible) {
+        Platform.runLater(() -> info_write_label.setText(line));
+        info_write_label.setVisible(visible);
+    }
+
+    private void showMessage(int selectedUser, String line) {
+        // czy wybrany użytkownik na liście zgadza się z nazwą która przyszła od serwera
+        try {
+            String splitMessage[] = line.split(":");
+
+            /////////// zapisywanie historii //////////////////////
+            if(!history.containsKey(splitMessage[0])) {
+                ArrayList<String> hisList = new ArrayList<>();
+                hisList.add(line);
+                history.put(splitMessage[0], hisList);
+            } else {
+                history.get(splitMessage[0]).add(line);
+            }
+
+            if(splitMessage[0].equals(nick)) {
+                for(String key : users.keySet()) {
+                    if(users.get(key) == selectedUser) {
+                        try{
+                            history.get(key).add(line);
+                        }catch (Exception e) {
+                            ArrayList<String> hisList = new ArrayList<>();
+                            hisList.add(line);
+                            history.put(key,hisList);
+                        }
+                    }
+                }
+            }
+            ///////////////////////////////////////////////////////
+
+            int port = users.get(splitMessage[0]);
+            if (selectedUser == port || socket.getLocalPort() == port) read_area.appendText(line+"\n");
+        }catch (Exception e) {
+                read_area.appendText(line + "\n");
         }
     }
 
     private void updateUsersList() {
         ObservableList<String> items = FXCollections.observableArrayList();
 
-        for (String key : users.keySet()) {
-            items.add(key);
-        }
+        for (String key : users.keySet()) items.add(key);
         Platform.runLater(() -> active_list.setItems(items));
     }
 }
