@@ -12,9 +12,6 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.*;
 
-/**
- * Created by Jacek on 06.04.2017.
- */
 public class MainController implements Initializable, Runnable {
 
     @FXML BorderPane bp;
@@ -47,27 +44,46 @@ public class MainController implements Initializable, Runnable {
     private boolean sent = false;
 
     @Override
+    @SuppressWarnings("unchecked")
     public void initialize(URL location, ResourceBundle resources) {
         //connect();
         disconnectedStatus();
         emptyList.add("<Rozłączono>");
         Platform.runLater(() -> active_list.setItems(emptyList));
         send_button.setOnAction(event -> {
-            if(!send_field.getText().equals(""))
-            sendMessage(socket.getLocalPort(), selectedUser, send_field.getText());
+            if(!send_field.getText().equals("")) {
+                sendMessage(socket.getLocalPort(), selectedUser, send_field.getText());
+                sendMessage(1,selectedUser,"@"+nick+" napisał."); ///////////////tutaj
+            }
             send_field.setText("");
+            //sendMessage(1, selectedUser, "!");
+
         });
 
         send_field.setOnKeyReleased(event -> {
-
             if(!send_field.getText().equals("") && !sent)
             sendMessage(1,selectedUser, "@" + nick + " pisze...");
             sent = true;
             if(send_field.getText().equals("")) {
-                sendMessage(1, selectedUser, "!");
+                try {
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        if(send_field.getText().equals("")) {
+                            sendMessage(1, selectedUser, "! " + nick + " napisał.");
+                        } else {
+                            sendMessage(1,selectedUser, "@" + nick + " pisze...");
+                        }
+                    }).start();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
                 sent = false;
             }
-
         });
 
         connect_button.setOnAction(event -> {
@@ -83,6 +99,8 @@ public class MainController implements Initializable, Runnable {
         });
 
         refresh_button.setOnAction(event -> updateUsersList());
+
+        active_list.getStylesheets().add("active_view_styles.css");
 
         active_list.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             String a = (String) observable.getValue();
@@ -113,6 +131,8 @@ public class MainController implements Initializable, Runnable {
         disconnect_button.setDisable(false);
         refresh_button.setDisable(false);
     }
+
+    @SuppressWarnings("unchecked")
     private void disconnectedStatus() {
         nick_field.setDisable(false);
         connect_button.setDisable(false);
@@ -120,8 +140,6 @@ public class MainController implements Initializable, Runnable {
         refresh_button.setDisable(true);
         send_button.setDisable(true);
         Platform.runLater(() -> active_list.setItems(emptyList));
-
-
 
     }
 
@@ -140,7 +158,7 @@ public class MainController implements Initializable, Runnable {
 
     private void connect() {
         try {
-            socket = new Socket("192.168.1.111",8189);
+            socket = new Socket("localhost",8189);
             System.out.println("Połączono!");
             start();
         }catch (Exception e) {
@@ -160,16 +178,16 @@ public class MainController implements Initializable, Runnable {
         }
     }
 
-    private boolean sendMessage(int myPort, int destPort, String msg) {
+    private void sendMessage(int myPort, int destPort, String msg) {
         if(msg.matches("(.*)~(.*)")) {
             msg = msg.replaceAll("~"," ");
         }
         try{
             out.println(myPort+"~"+destPort+"~"+msg);
-            return true;
+            //return true;
         } catch (Exception e) {
             System.out.println("Nie wysłano.");
-            return false;
+            //return false;
         }
     }
 
@@ -208,8 +226,9 @@ public class MainController implements Initializable, Runnable {
             }
         } else if(line.matches("@(.*)")) {
             setInfoLabel(line, true);
-        } else if(line.equals("!")) {
+        } else if(line.matches("!(.*)")) { /////////////////////////// i tutaj
             setInfoLabel(line, false);
+
         } else {
             //read_area.appendText(line + "\n");
             showMessage(selectedUser, line);
@@ -227,6 +246,7 @@ public class MainController implements Initializable, Runnable {
         // czy wybrany użytkownik na liście zgadza się z nazwą która przyszła od serwera
         try {
             String splitMessage[] = line.split(":");
+
 
             /////////// zapisywanie historii //////////////////////
             if(!history.containsKey(splitMessage[0])) {
@@ -259,10 +279,11 @@ public class MainController implements Initializable, Runnable {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void updateUsersList() {
         ObservableList<String> items = FXCollections.observableArrayList();
 
-        for (String key : users.keySet()) items.add(key);
+        items.addAll(users.keySet());
         Platform.runLater(() -> active_list.setItems(items));
     }
 }
