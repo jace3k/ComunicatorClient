@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.SeparatorMenuItem?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane fx:id="bp" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="jack.MainController">
+   <top>
+      <MenuBar fx:id="menu_bar" BorderPane.alignment="CENTER">
+        <menus>
+          <Menu mnemonicParsing="false" text="Działanie">
+            <items>
+                  <MenuItem fx:id="addFriend_item" mnemonicParsing="false" onAction="#addFriendAction" text="Dodaj znajomego" />
+                  <SeparatorMenuItem mnemonicParsing="false" />
+                  <MenuItem fx:id="connect_item" disable="true" mnemonicParsing="false" onAction="#connectAction" text="Połącz" />
+                  <MenuItem fx:id="disconnect_item" mnemonicParsing="false" onAction="#disconnectAction" text="Rozłącz" />
+                  <MenuItem fx:id="refresh_item" mnemonicParsing="false" onAction="#refreshAction" text="Odśwież" />
+                  <SeparatorMenuItem mnemonicParsing="false" />
+              <MenuItem fx:id="exit_item" mnemonicParsing="false" onAction="#exitAction" text="Wyjdź" />
+            </items>
+          </Menu>
+        </menus>
+      </MenuBar>
+   </top>
+   <center>
+      <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+         <center>
+            <TextArea fx:id="read_area" editable="false" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+         </center>
+         <bottom>
+            <ToolBar prefHeight="40.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+              <items>
+                  <TextField fx:id="send_field" minHeight="-Infinity" minWidth="-Infinity" onKeyReleased="#keyPressedAction" prefHeight="31.0" prefWidth="529.0" />
+                <Button fx:id="send_button" defaultButton="true" mnemonicParsing="false" onAction="#sendAction" text="Wyślij" />
+              </items>
+            </ToolBar>
+         </bottom>
+         <right>
+            <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+               <center>
+                  <VBox fx:id="vbox_users" prefHeight="287.0" prefWidth="186.0" BorderPane.alignment="CENTER">
+                     <children>
+                        <Label alignment="TOP_CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" text="Ładowanie..">
+                           <VBox.margin>
+                              <Insets bottom="4.0" />
+                           </VBox.margin>
+                        </Label>
+                     </children>
+                  </VBox>
+               </center>
+               <bottom>
+                  <Label fx:id="typing_label" text="ktoś pisze.." BorderPane.alignment="CENTER" />
+               </bottom>
+               <top>
+                  <ToolBar prefHeight="40.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+                     <items>
+                        <Label alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="28.0" prefWidth="185.0" text="Znajomi">
+                           <font>
+                              <Font name="Calibri Bold Italic" size="22.0" />
+                           </font>
+                        </Label>
+                     </items>
+                  </ToolBar>
+               </top>
+            </BorderPane>
+         </right>
+         <top>
+            <ToolBar prefHeight="40.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+              <items>
+                  <Label fx:id="title_label" prefHeight="41.0" prefWidth="586.0" text="Placek">
+                     <font>
+                        <Font name="Calibri Bold Italic" size="27.0" />
+                     </font>
+                  </Label>
+              </items>
+            </ToolBar>
+         </top>
+      </BorderPane>
+   </center>
+</BorderPane>
